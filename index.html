@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f3ed">
+  <title>Clairtexte — chiffrement de messages</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3f3ed;
+      --ink: #17231e;
+      --muted: #68736c;
+      --line: #d8ddd5;
+      --green: #245c47;
+      --green-dark: #194735;
+      --lime: #d5e76e;
+      --white: #fff;
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: "Trebuchet MS", "Segoe UI", sans-serif;
+      --mono: Consolas, "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#cdd4c9 0.65px, transparent 0.65px);
+      background-size: 16px 16px;
+      font-family: var(--sans);
+    }
+
+    button, textarea, input { font: inherit; }
+    button { color: inherit; }
+
+    .page-shell {
+      width: min(1120px, calc(100% - 48px));
+      min-height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 21px;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--lime);
+      background: var(--green);
+    }
+
+    .local-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    .local-badge::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64a77b;
+      content: "";
+    }
+
+    main { flex: 1; padding: 58px 0 48px; }
+
+    .intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 32px;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 44px;
+      font-weight: 400;
+      line-height: 1.06;
+    }
+
+    .intro-copy {
+      max-width: 340px;
+      margin: 0 0 3px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .workbench {
+      overflow: hidden;
+      border: 1px solid #cbd2c9;
+      border-radius: 6px;
+      background: var(--white);
+      box-shadow: 0 16px 45px rgb(35 54 43 / 8%);
+    }
+
+    .workbench-head {
+      min-height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 12px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #f6f7f3;
+    }
+
+    .mode-button {
+      min-height: 34px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      background: var(--green);
+      color: var(--white);
+    }
+
+    .algorithm {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .column { min-width: 0; padding: 23px 24px 20px; }
+    .column + .column { border-left: 1px solid var(--line); }
+
+    .field-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    label, .field-label {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .field-hint, .character-count {
+      color: #859087;
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 195px;
+      resize: vertical;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      outline: none;
+      background: #fbfcf9;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.65;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    textarea:focus, input:focus {
+      border-color: #59866f;
+      box-shadow: 0 0 0 3px rgb(36 92 71 / 11%);
+    }
+
+    textarea::placeholder { color: #a1aaa2; }
+    textarea[readonly] { background: #f7f8f4; }
+
+    .password-row { margin-top: 19px; }
+
+    .password-wrap { position: relative; margin-top: 9px; }
+
+    .password-wrap input {
+      width: 100%;
+      height: 43px;
+      padding: 0 48px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      outline: none;
+      background: #fbfcf9;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .reveal-button {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 35px;
+      height: 35px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .reveal-button:hover { background: #edf0ea; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .primary-button {
+      min-height: 43px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 4px;
+      background: var(--green);
+      color: var(--white);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 140ms ease, transform 140ms ease;
+    }
+
+    .primary-button:hover { background: var(--green-dark); }
+    .primary-button:active { transform: translateY(1px); }
+    .primary-button:disabled { cursor: wait; opacity: 0.7; }
+
+    .text-button {
+      min-height: 38px;
+      padding: 0 8px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .text-button:hover { color: var(--ink); }
+
+    .output-heading { min-height: 18px; }
+    .output-actions { display: inline-flex; align-items: center; gap: 2px; }
+    .icon-button {
+      width: 32px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .icon-button:hover { background: #edf0ea; color: var(--ink); }
+
+    .status {
+      min-height: 21px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .status[data-kind="success"] { color: #286546; }
+    .status[data-kind="error"] { color: #a13e35; }
+
+    .privacy-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-left: 3px solid var(--lime);
+      background: #e9ece2;
+      color: #4c5b50;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .privacy-note strong { color: var(--ink); }
+
+    footer {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .footer-tech { font-family: var(--mono); }
+
+    @media (max-width: 700px) {
+      .page-shell { width: min(100% - 28px, 540px); }
+      main { padding: 38px 0 32px; }
+      .intro { display: block; margin-bottom: 23px; }
+      h1 { font-size: 37px; }
+      .intro-copy { margin-top: 13px; }
+      .workbench-head { align-items: flex-start; flex-direction: column; gap: 10px; padding: 14px; }
+      .columns { grid-template-columns: 1fr; }
+      .column { padding: 18px 15px; }
+      .column + .column { border-top: 1px solid var(--line); border-left: 0; }
+      textarea { min-height: 150px; }
+      .local-badge { font-size: 0; }
+      .local-badge::before { width: 8px; height: 8px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CryptoChat, accueil">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.8" />
+            <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <circle cx="12" cy="15" r="1.2" fill="currentColor" />
+          </svg>
+        </span>
+        CryptoChat
+      </a>
+      <span class="local-badge">Traitement local</span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Un message, à l'abri des regards</p>
+          <h1 id="page-title">Chiffrez en toute<br>simplicité.</h1>
+        </div>
+        <p class="intro-copy">Un mot de passe transforme votre texte en un message illisible. Seule la même clé permet de le retrouver.</p>
+      </section>
+
+      <section class="workbench" aria-label="Outil de chiffrement">
+        <div class="workbench-head">
+          <div class="mode-switch" role="group" aria-label="Choisir une opération">
+            <button class="mode-button" id="encrypt-mode" type="button" aria-pressed="true">Chiffrer</button>
+            <button class="mode-button" id="decrypt-mode" type="button" aria-pressed="false">Déchiffrer</button>
+          </div>
+          <span class="algorithm">AES-256-GCM <span aria-hidden="true">·</span> PBKDF2</span>
+        </div>
+
+        <div class="columns">
+          <div class="column">
+            <div class="field-heading">
+              <label id="input-label" for="message-input">Votre message</label>
+              <span class="character-count" id="input-count">0 caractère</span>
+            </div>
+            <textarea id="message-input" spellcheck="false" placeholder="Écrivez votre message ici…" aria-describedby="status"></textarea>
+
+            <div class="password-row">
+              <div class="field-heading">
+                <label for="password-input">Mot de passe</label>
+                <span class="field-hint">À garder secret</span>
+              </div>
+              <div class="password-wrap">
+                <input id="password-input" type="password" autocomplete="new-password" placeholder="Choisissez une phrase secrète">
+                <button class="reveal-button" id="reveal-password" type="button" aria-label="Afficher le mot de passe" title="Afficher le mot de passe">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7" />
+                    <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary-button" id="run-button" type="button">
+                <svg id="run-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+                <span id="run-label">Chiffrer le message</span>
+              </button>
+              <button class="text-button" id="clear-button" type="button">Effacer</button>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="field-heading output-heading">
+              <span class="field-label" id="output-label">Message chiffré</span>
+              <span class="output-actions">
+                <button class="icon-button" id="copy-button" type="button" aria-label="Copier le résultat" title="Copier le résultat">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="8" y="8" width="12" height="13" rx="2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+            <textarea id="message-output" readonly spellcheck="false" placeholder="Le résultat apparaîtra ici…" aria-label="Résultat"></textarea>
+            <p class="status" id="status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="privacy-note">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3 20 6v5c0 5.1-3.4 8.4-8 10-4.6-1.6-8-4.9-8-10V6l8-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+          <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span><strong>Vos données restent ici.</strong> Le chiffrement s'effectue dans votre navigateur. Le mot de passe n'est ni enregistré ni transmis. Conservez-le : il ne peut pas être récupéré.</span>
+      </aside>
+    </main>
+
+    <footer>
+      <span>Clairtexte <span aria-hidden="true">·</span> Vos mots vous appartiennent.</span>
+      <span class="footer-tech">Aucun compte. Aucun envoi.</span>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const ITERATIONS = 310000;
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const input = document.querySelector("#message-input");
+      const output = document.querySelector("#message-output");
+      const password = document.querySelector("#password-input");
+      const status = document.querySelector("#status");
+      const count = document.querySelector("#input-count");
+      const runButton = document.querySelector("#run-button");
+      let mode = "encrypt";
+
+      function setStatus(message, kind = "") {
+        status.textContent = message;
+        status.dataset.kind = kind;
+      }
+
+      function toBase64Url(bytes) {
+        let binary = "";
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      }
+
+      function fromBase64Url(value) {
+        if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) {
+          throw new Error("Base64 URL invalide");
+        }
+        const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+        const binary = atob(padded);
+        return Uint8Array.from(binary, character => character.charCodeAt(0));
+      }
+
+      async function deriveKey(secret, salt, iterations) {
+        const material = await crypto.subtle.importKey(
+          "raw", encoder.encode(secret), "PBKDF2", false, ["deriveKey"]
+        );
+        return crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+          material,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      async function encryptMessage(message, secret) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(secret, salt, ITERATIONS);
+        const encrypted = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv }, key, encoder.encode(message)
+        );
+        const ciphertext = new Uint8Array(encrypted);
+        const payload = new Uint8Array(salt.length + iv.length + ciphertext.length);
+        payload.set(salt, 0);
+        payload.set(iv, salt.length);
+        payload.set(ciphertext, salt.length + iv.length);
+        return toBase64Url(payload);
+      }
+
+      async function decryptMessage(serialized, secret) {
+        const encodedPayload = serialized.startsWith("CT1.") ? serialized.slice(4) : serialized;
+        let payload;
+        try {
+          payload = fromBase64Url(encodedPayload);
+        } catch {
+          throw new Error("Le message chiffré est incomplet ou endommagé.");
+        }
+        if (payload.length < 44) {
+          throw new Error("Le message chiffré est incomplet ou endommagé.");
+        }
+        const salt = payload.slice(0, 16);
+        const iv = payload.slice(16, 28);
+        const ciphertext = payload.slice(28);
+        if (ciphertext.length < 16) {
+          throw new Error("Le message chiffré est incomplet ou endommagé.");
+        }
+        const key = await deriveKey(secret, salt, ITERATIONS);
+        try {
+          const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+          return decoder.decode(decrypted);
+        } catch {
+          throw new Error("Déchiffrement impossible : vérifiez le mot de passe et le message.");
+        }
+      }
+
+      function updateCount() {
+        const length = input.value.length;
+        count.textContent = `${length} caractère${length === 1 ? "" : "s"}`;
+      }
+
+      function setMode(nextMode) {
+        mode = nextMode;
+        const encrypting = mode === "encrypt";
+        document.querySelector("#encrypt-mode").setAttribute("aria-pressed", String(encrypting));
+        document.querySelector("#decrypt-mode").setAttribute("aria-pressed", String(!encrypting));
+        document.querySelector("#input-label").textContent = encrypting ? "Votre message" : "Message chiffré à déchiffrer";
+        document.querySelector("#output-label").textContent = encrypting ? "Message chiffré" : "Message déchiffré";
+        input.placeholder = encrypting ? "Écrivez votre message ici…" : "Collez ici le message chiffré…";
+        document.querySelector("#run-label").textContent = encrypting ? "Chiffrer le message" : "Déchiffrer le message";
+        output.placeholder = encrypting ? "Le résultat apparaîtra ici…" : "Le texte déchiffré apparaîtra ici…";
+        document.querySelector("#run-icon").innerHTML = encrypting
+          ? '<rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.8" /><path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />'
+          : '<rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.8" /><path d="M8 10V7a4 4 0 1 1 8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />';
+        output.value = "";
+        setStatus("");
+      }
+
+      document.querySelector("#encrypt-mode").addEventListener("click", () => setMode("encrypt"));
+      document.querySelector("#decrypt-mode").addEventListener("click", () => setMode("decrypt"));
+      input.addEventListener("input", updateCount);
+
+      document.querySelector("#reveal-password").addEventListener("click", event => {
+        const visible = password.type === "password";
+        password.type = visible ? "text" : "password";
+        event.currentTarget.setAttribute("aria-label", visible ? "Masquer le mot de passe" : "Afficher le mot de passe");
+        event.currentTarget.title = visible ? "Masquer le mot de passe" : "Afficher le mot de passe";
+      });
+
+      document.querySelector("#clear-button").addEventListener("click", () => {
+        input.value = "";
+        output.value = "";
+        password.value = "";
+        updateCount();
+        setStatus("");
+        input.focus();
+      });
+
+      runButton.addEventListener("click", async () => {
+        if (!input.value) {
+          setStatus("Saisissez un message pour continuer.", "error");
+          input.focus();
+          return;
+        }
+        if (!password.value) {
+          setStatus("Saisissez un mot de passe.", "error");
+          password.focus();
+          return;
+        }
+        if (!globalThis.crypto?.subtle) {
+          setStatus("Le chiffrement sécurisé n'est pas disponible dans ce navigateur.", "error");
+          return;
+        }
+        runButton.disabled = true;
+        setStatus(mode === "encrypt" ? "Chiffrement en cours…" : "Déchiffrement en cours…");
+        try {
+          output.value = mode === "encrypt"
+            ? await encryptMessage(input.value, password.value)
+            : await decryptMessage(input.value, password.value);
+          setStatus(mode === "encrypt" ? "Message chiffré. Copiez-le pour le conserver ou le partager." : "Message déchiffré avec succès.", "success");
+        } catch (error) {
+          output.value = "";
+          setStatus(error instanceof Error ? error.message : "Une erreur est survenue.", "error");
+        } finally {
+          runButton.disabled = false;
+        }
+      });
+
+      document.querySelector("#copy-button").addEventListener("click", async () => {
+        if (!output.value) {
+          setStatus("Aucun résultat à copier.", "error");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(output.value);
+          setStatus("Résultat copié dans le presse-papiers.", "success");
+        } catch {
+          output.focus();
+          output.select();
+          setStatus("Sélectionnez le texte pour le copier.");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
